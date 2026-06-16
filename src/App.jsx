@@ -78,9 +78,9 @@ function EditModal({ row, onSave, onClose }) {
   const handleCb失敗 = (checked) => {
     if (checked) {
       const val = form.失敗;
-      const isEmpty = val === '' || val === '0' || val === 0 || val === null;
+      const isEmpty = val === "" || val === "0" || val === 0 || val === null;
       if (isEmpty) {
-        setForm((f) => ({ ...f, 失敗: '', cb成功: false }));
+        setForm((f) => ({ ...f, 失敗: "", cb成功: false }));
         setShowFailDialog(true);
       } else {
         setForm((f) => ({ ...f, cb失敗: true, cb成功: false }));
@@ -91,7 +91,7 @@ function EditModal({ row, onSave, onClose }) {
   };
 
   const confirmFail = (val) => {
-    const n = val === '' ? '0' : val;
+    const n = val === "" ? "0" : val;
     setForm((f) => ({ ...f, cb失敗: true, cb成功: false, 失敗: n }));
     setShowFailDialog(false);
   };
@@ -264,7 +264,10 @@ function EditModal({ row, onSave, onClose }) {
         </div>
       </div>
       {showFailDialog && (
-        <FailDialog onConfirm={confirmFail} onCancel={() => setShowFailDialog(false)} />
+        <FailDialog
+          onConfirm={confirmFail}
+          onCancel={() => setShowFailDialog(false)}
+        />
       )}
     </div>
   );
@@ -305,6 +308,7 @@ export default function App() {
   const [page, setPage] = useState("list");
   const [showWelcome, setShowWelcome] = useState(true);
   const [statsFilter, setStatsFilter] = useState(null);
+  const [findFilter, setFindFilter] = useState("找全部");
 
   const handleToggle = (id, field) => {
     const updated = rows.map((r) =>
@@ -395,8 +399,10 @@ export default function App() {
     if (statsFilter === "noted") list = list.filter((r) => r.備註);
     if (statsFilter === "success") list = list.filter((r) => r.結果 === "成功");
     if (statsFilter === "fail") list = list.filter((r) => r.結果 === "失敗");
+    if (filter === "無類別" && findFilter !== "找全部")
+      list = list.filter((r) => (r.找 ?? "找今天") === findFilter);
     return list;
-  }, [rows, filter, search, statsFilter]);
+  }, [rows, filter, search, statsFilter, findFilter]);
 
   const stats = useMemo(
     () => ({
@@ -415,7 +421,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>BJC 審查單</h1>
+        <h1>BJC 檢查網頁</h1>
         <div className="header-actions">
           {page === "list" && (
             <>
@@ -507,12 +513,33 @@ export default function App() {
                       ? { background: CATEGORY_COLORS[c] }
                       : {}
                   }
-                  onClick={() => setFilter(c)}
+                  onClick={() => {
+                    setFilter(c);
+                    setFindFilter("找全部");
+                  }}
                 >
                   {c}
                 </button>
               ))}
             </div>
+            {filter === "無類別" && (
+              <div className="find-subtabs">
+                <div className="find-tabs">
+                  {["找全部", "找今天", "找昨天"].map((f) => (
+                    <button
+                      key={f}
+                      className={`tab ${findFilter === f ? "active" : ""}`}
+                      onClick={() => setFindFilter(f)}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                <span className="find-hint">
+                  可以先一口氣列完哪些是今天與昨天，這樣就不需要一直切換視窗
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="list">

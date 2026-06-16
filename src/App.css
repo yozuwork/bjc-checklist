@@ -91,6 +91,22 @@
   scrollbar-width: none;
 }
 .filter-tabs::-webkit-scrollbar { display: none; }
+
+.find-subtabs {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.find-tabs {
+  display: flex;
+  gap: 6px;
+}
+.find-hint {
+  font-size: .72rem;
+  color: #9ca3af;
+  line-height: 1.4;
+}
 .tab {
   flex-shrink: 0;
   padding: 5px 14px;
