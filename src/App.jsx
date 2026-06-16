@@ -18,6 +18,30 @@ function loadData() {
   return initialData;
 }
 
+function FailDialog({ onConfirm, onCancel }) {
+  const [val, setVal] = useState('');
+  return (
+    <div className="dialog-backdrop" onClick={onCancel}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dialog-title">輸入失敗數量</div>
+        <input
+          className="dialog-input"
+          type="text"
+          inputMode="numeric"
+          value={val}
+          autoFocus
+          onChange={(e) => setVal(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onConfirm(val)}
+        />
+        <div className="dialog-actions">
+          <button className="btn-cancel" onClick={onCancel}>取消</button>
+          <button className="btn-save" onClick={() => onConfirm(val)}>確定</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditModal({ row, onSave, onClose }) {
   const [form, setForm] = useState({
     應有: row.應有 ?? '',
@@ -26,10 +50,62 @@ function EditModal({ row, onSave, onClose }) {
     類別: row.類別,
     審查: !!row.審查,
     複查: !!row.複查,
+    已登記: !!row.已登記,
+    已提正: !!row.已提正,
+    找: row.找 ?? '找今天',
     備註: row.備註 ?? '',
+    cb成功: false,
+    cb失敗: false,
   });
+  const [showFailDialog, setShowFailDialog] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const handleCb成功 = (checked) => {
+    setForm((f) => ({
+      ...f,
+      cb成功: checked,
+      cb失敗: checked ? false : f.cb失敗,
+      ...(checked ? { 失敗: '0' } : {}),
+    }));
+  };
+
+  const handleCb失敗 = (checked) => {
+    if (checked) {
+      if (form.失敗 !== '' && form.失敗 !== null) {
+        setForm((f) => ({ ...f, cb失敗: true, cb成功: false }));
+      } else {
+        setShowFailDialog(true);
+      }
+    } else {
+      setForm((f) => ({ ...f, cb失敗: false }));
+    }
+  };
+
+  const confirmFail = (val) => {
+    const n = val === '' ? '0' : val;
+    setForm((f) => ({ ...f, cb失敗: true, cb成功: false, 失敗: n }));
+    setShowFailDialog(false);
+  };
+
+  const cancelFail = () => setShowFailDialog(false);
+
+  const handle應有 = (e) => {
+    const v = e.target.value;
+    setForm((f) => {
+      if (f.cb成功) return { ...f, 應有: v, 成功: v };
+      if (f.cb失敗) {
+        const s = v === '' ? '' : String(Math.max(0, Number(v) - Number(f.失敗 || 0)));
+        return { ...f, 應有: v, 成功: s };
+      }
+      return { ...f, 應有: v };
+    });
+  };
+
+  const handle成功 = (e) => {
+    const v = e.target.value;
+    setForm((f) => ({ ...f, 成功: v, ...(f.cb成功 ? { 應有: v } : {}) }));
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -39,20 +115,47 @@ function EditModal({ row, onSave, onClose }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="modal-body">
+          <div className="cb-row">
+            <label className="label-checkbox">
+              <input type="checkbox" checked={form.cb成功}
+                onChange={(e) => handleCb成功(e.target.checked)} />
+              成功
+            </label>
+            <label className="label-checkbox">
+              <input type="checkbox" checked={form.cb失敗}
+                onChange={(e) => handleCb失敗(e.target.checked)} />
+              失敗
+            </label>
+          </div>
           <label>應有數量
-            <input type="number" value={form.應有} onChange={set('應有')} placeholder="－" inputMode="numeric" />
+            <input type="number" value={form.應有} onChange={handle應有} placeholder="－" inputMode="numeric" />
           </label>
           <label>成功數量
-            <input type="number" value={form.成功} onChange={set('成功')} placeholder="－" inputMode="numeric" />
+            <input type="number" value={form.成功} onChange={handle成功} placeholder="－" inputMode="numeric" />
           </label>
           <label>失敗
             <input type="number" value={form.失敗} onChange={set('失敗')} placeholder="－" inputMode="numeric" />
           </label>
+          {form.cb失敗 && (
+            <label className="label-checkbox">
+              <input type="checkbox" checked={form.已提正}
+                onChange={(e) => setForm((f) => ({ ...f, 已提正: e.target.checked }))} />
+              已提正
+            </label>
+          )}
           <label>類別
             <select value={form.類別} onChange={set('類別')}>
               {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select>
           </label>
+          {form.類別 === '無類別' && (
+            <label>找
+              <select value={form.找} onChange={set('找')}>
+                <option>找今天</option>
+                <option>找昨天</option>
+              </select>
+            </label>
+          )}
           <label className="label-checkbox">
             <input type="checkbox" checked={form.審查}
               onChange={(e) => setForm((f) => ({ ...f, 審查: e.target.checked }))} />
@@ -63,6 +166,11 @@ function EditModal({ row, onSave, onClose }) {
               onChange={(e) => setForm((f) => ({ ...f, 複查: e.target.checked }))} />
             複查
           </label>
+          <label className="label-checkbox">
+            <input type="checkbox" checked={form.已登記}
+              onChange={(e) => setForm((f) => ({ ...f, 已登記: e.target.checked }))} />
+            已登記
+          </label>
           <label>備註
             <textarea value={form.備註} onChange={set('備註')} placeholder="輸入備註..." rows={3} />
           </label>
@@ -70,6 +178,23 @@ function EditModal({ row, onSave, onClose }) {
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>取消</button>
           <button className="btn-save" onClick={() => onSave(form)}>儲存</button>
+        </div>
+      </div>
+      {showFailDialog && <FailDialog onConfirm={confirmFail} onCancel={cancelFail} />}
+    </div>
+  );
+}
+
+const ABOUT_TEXT = '此頁面的目的是讓使用者可直接用手機記錄所有結果，最後再一次整理並填入 Excel，避免操作過程中頻繁切換 Excel 視窗，提升工作效率。';
+
+function WelcomeDialog({ onClose }) {
+  return (
+    <div className="dialog-backdrop" style={{ position: 'fixed', zIndex: 300 }} onClick={onClose}>
+      <div className="dialog" onClick={(e) => e.stopPropagation()} style={{ width: 300 }}>
+        <div className="dialog-title">關於此頁面</div>
+        <p className="welcome-text">{ABOUT_TEXT}</p>
+        <div className="dialog-actions">
+          <button className="btn-save" style={{ flex: 1 }} onClick={onClose}>了解</button>
         </div>
       </div>
     </div>
@@ -81,6 +206,8 @@ export default function App() {
   const [filter, setFilter] = useState('全部');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(null);
+  const [page, setPage] = useState('list');
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const handleToggle = (id, field) => {
     const updated = rows.map((r) =>
@@ -94,6 +221,11 @@ export default function App() {
     setRows(updated);
   };
 
+  const handleCardSelect = (id, val) => {
+    const updated = rows.map((r) => r.id === id ? { ...r, 找: val } : r);
+    save(updated);
+  };
+
   const handleSave = (form) => {
     const updated = rows.map((r) =>
       r.id === editing.id
@@ -105,6 +237,9 @@ export default function App() {
             類別: form.類別,
             審查: form.審查 || null,
             複查: form.複查 || null,
+            已登記: form.已登記 || null,
+            已提正: form.已提正 || null,
+            找: form.找 || null,
             備註: form.備註 || null,
           }
         : r
@@ -170,100 +305,134 @@ export default function App() {
       <header className="header">
         <h1>BJC 審和單</h1>
         <div className="header-actions">
-          <button className="reset-btn" onClick={handleExport}>匯出</button>
-          <label className="reset-btn import-btn">
-            匯入
-            <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
-          </label>
-          <button className="reset-btn" onClick={handleReset}>重置</button>
+          {page === 'list' && <>
+            <button className="reset-btn" onClick={handleExport}>匯出</button>
+            <label className="reset-btn import-btn">
+              匯入
+              <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+            </label>
+            <button className="reset-btn" onClick={handleReset}>重置</button>
+          </>}
+          <button className="reset-btn" onClick={() => setPage(page === 'about' ? 'list' : 'about')}>
+            {page === 'about' ? '返回' : '關於'}
+          </button>
         </div>
       </header>
 
-      <div className="stats-bar">
-        <span>共 {stats.total} 筆</span>
-        <span>已審 {stats.done} 筆</span>
-        <span>備註 {stats.noted} 筆</span>
-      </div>
-
-      <div className="toolbar">
-        <input
-          className="search"
-          type="search"
-          placeholder="搜尋 BJC 序號或備註…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="filter-tabs">
-          {['全部', ...CATEGORIES].map((c) => (
-            <button
-              key={c}
-              className={`tab ${filter === c ? 'active' : ''}`}
-              style={filter === c && c !== '全部' ? { background: CATEGORY_COLORS[c] } : {}}
-              onClick={() => setFilter(c)}
-            >
-              {c}
-            </button>
-          ))}
+      {page === 'about' && (
+        <div className="about-page">
+          <div className="about-card">
+            <h2 className="about-title">關於此頁面</h2>
+            <p className="about-text">{ABOUT_TEXT}</p>
+          </div>
         </div>
-      </div>
-
-      <div className="list">
-        {filtered.length === 0 && (
-          <div className="empty">沒有符合的資料</div>
-        )}
-        {filtered.map((row) => {
-          const color = CATEGORY_COLORS[row.類別] || '#6b7280';
-          const isDone = row.審查 || row.複查;
-          return (
-            <div
-              key={row.id}
-              className={`card ${isDone ? 'card-done' : ''}`}
-              onClick={() => setEditing(row)}
-            >
-              <div className="card-left">
-                <span className="bjc-num">BJC {row.bjc}</span>
-                <span className="badge" style={{ background: color }}>{row.類別}</span>
-              </div>
-              <div className="card-center">
-                <span className="num-cell">
-                  <span className="num-label">應有</span>
-                  <span className="num-val">{row.應有 ?? '－'}</span>
-                </span>
-                <span className="num-cell">
-                  <span className="num-label">成功</span>
-                  <span className="num-val success">{row.成功 ?? '－'}</span>
-                </span>
-                <span className="num-cell">
-                  <span className="num-label">失敗</span>
-                  <span className="num-val fail">{row.失敗 ?? '－'}</span>
-                </span>
-              </div>
-              <div className="card-right">
-                <label className="card-check" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={!!row.審查}
-                    onChange={() => handleToggle(row.id, '審查')} />
-                  <span>審</span>
-                </label>
-                <label className="card-check" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={!!row.複查}
-                    onChange={() => handleToggle(row.id, '複查')} />
-                  <span>複</span>
-                </label>
-                {row.備註 && <span className="note-icon">📝</span>}
-                <span className="arrow">›</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {editing && (
-        <EditModal
-          row={editing}
-          onSave={handleSave}
-          onClose={() => setEditing(null)}
-        />
       )}
+
+      {page === 'list' && <>
+        <div className="stats-bar">
+          <span>共 {stats.total} 筆</span>
+          <span>已審 {stats.done} 筆</span>
+          <span>備註 {stats.noted} 筆</span>
+        </div>
+
+        <div className="toolbar">
+          <input
+            className="search"
+            type="search"
+            placeholder="搜尋 BJC 序號或備註…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="filter-tabs">
+            {['全部', ...CATEGORIES].map((c) => (
+              <button
+                key={c}
+                className={`tab ${filter === c ? 'active' : ''}`}
+                style={filter === c && c !== '全部' ? { background: CATEGORY_COLORS[c] } : {}}
+                onClick={() => setFilter(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="list">
+          {filtered.length === 0 && (
+            <div className="empty">沒有符合的資料</div>
+          )}
+          {filtered.map((row) => {
+            const color = CATEGORY_COLORS[row.類別] || '#6b7280';
+            const isDone = row.審查 || row.複查;
+            return (
+              <div
+                key={row.id}
+                className={`card ${isDone ? 'card-done' : ''}`}
+                onClick={() => setEditing(row)}
+              >
+                <div className="card-left">
+                  <span className="bjc-num">BJC {row.bjc}</span>
+                  <span className="badge" style={{ background: color }}>{row.類別}</span>
+                </div>
+                <div className="card-center">
+                  <span className="num-cell">
+                    <span className="num-label">應有</span>
+                    <span className="num-val">{row.應有 ?? '－'}</span>
+                  </span>
+                  <span className="num-cell">
+                    <span className="num-label">成功</span>
+                    <span className="num-val success">{row.成功 ?? '－'}</span>
+                  </span>
+                  <span className="num-cell">
+                    <span className="num-label">失敗</span>
+                    <span className="num-val fail">{row.失敗 ?? '－'}</span>
+                  </span>
+                </div>
+                {row.類別 === '無類別' && (
+                  <select
+                    className="card-find-select"
+                    value={row.找 ?? '找今天'}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => { e.stopPropagation(); handleCardSelect(row.id, e.target.value); }}
+                  >
+                    <option>找今天</option>
+                    <option>找昨天</option>
+                  </select>
+                )}
+                <div className="card-right">
+                  <label className="card-check" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={!!row.審查}
+                      onChange={() => handleToggle(row.id, '審查')} />
+                    <span>審</span>
+                  </label>
+                  <label className="card-check" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={!!row.複查}
+                      onChange={() => handleToggle(row.id, '複查')} />
+                    <span>複</span>
+                  </label>
+                  <label className="card-check" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={!!row.已登記}
+                      onChange={() => handleToggle(row.id, '已登記')} />
+                    <span>登</span>
+                  </label>
+                  {row.備註 && <span className="note-icon">📝</span>}
+                  <span className="arrow">›</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {editing && (
+          <EditModal
+            row={editing}
+            onSave={handleSave}
+            onClose={() => setEditing(null)}
+          />
+        )}
+      </>}
+
+      {showWelcome && <WelcomeDialog onClose={() => setShowWelcome(false)} />}
     </div>
   );
 }

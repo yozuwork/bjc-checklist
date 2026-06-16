@@ -336,6 +336,109 @@
   padding: 0;
 }
 
+.dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dialog {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 20px 16px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+.dialog-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+}
+.dialog-input {
+  padding: 10px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  text-align: center;
+  outline: none;
+  background: #f9fafb;
+  width: 100%;
+}
+.dialog-input:focus { border-color: #1a73e8; background: #fff; }
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+}
+.dialog-actions .btn-cancel,
+.dialog-actions .btn-save {
+  flex: 1;
+  padding: 11px;
+  border: none;
+  border-radius: 10px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dialog-actions .btn-cancel { background: #f3f4f6; color: #374151; }
+.dialog-actions .btn-save   { background: #1a73e8; color: #fff; }
+
+.about-page {
+  flex: 1;
+  padding: 24px 16px;
+}
+.about-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+.about-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 14px;
+}
+.about-text {
+  font-size: .95rem;
+  color: #374151;
+  line-height: 1.7;
+}
+.welcome-text {
+  font-size: .92rem;
+  color: #374151;
+  line-height: 1.7;
+  text-align: left;
+  margin: 0;
+}
+
+.card-find-select {
+  font-size: .75rem;
+  padding: 4px 6px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+  max-width: 72px;
+}
+.card-find-select:focus { border-color: #1a73e8; }
+
+.cb-row {
+  display: flex;
+  gap: 10px;
+}
+.cb-row .label-checkbox {
+  flex: 1;
+}
+
 .modal-footer {
   padding: 12px 20px 20px;
   display: flex;
