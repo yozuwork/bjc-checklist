@@ -1,6 +1,17 @@
 import React, { useState, useMemo } from "react";
+import * as XLSX from "xlsx";
 import { initialData, CATEGORIES } from "./data";
 import "./App.css";
+
+function escapeHtml(str) {
+  return String(str ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
+}
 
 const CATEGORY_COLORS = {
   無類別: "#6b7280",
@@ -368,6 +379,88 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportExcel = () => {
+    const data = rows.map((r) => ({
+      BJC: r.bjc,
+      類別: r.類別,
+      應有: r.應有 ?? "",
+      成功: r.成功 ?? "",
+      失敗: r.失敗 ?? "",
+      結果: r.結果 ?? "",
+      審查: r.審查 ? "是" : "",
+      複查: r.複查 ? "是" : "",
+      已登記: r.已登記 ? "是" : "",
+      已提供釐正或問題原因: r.已提供釐正或問題原因 ? "是" : "",
+      找: r.找 ?? "",
+      備註: r.備註 ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "BJC檢查清單");
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `bjc-checklist-${date}.xlsx`);
+  };
+
+  const handleExportPDF = () => {
+    const win = window.open("", "_blank");
+    if (!win) {
+      alert("請允許此網站開啟快顯視窗，才能匯出 PDF。");
+      return;
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const rowsHtml = rows
+      .map(
+        (r) => `
+      <tr>
+        <td>${escapeHtml(r.bjc)}</td>
+        <td>${escapeHtml(r.類別)}</td>
+        <td>${escapeHtml(r.應有)}</td>
+        <td>${escapeHtml(r.成功)}</td>
+        <td>${escapeHtml(r.失敗)}</td>
+        <td>${escapeHtml(r.結果)}</td>
+        <td>${r.審查 ? "✓" : ""}</td>
+        <td>${r.複查 ? "✓" : ""}</td>
+        <td>${r.已登記 ? "✓" : ""}</td>
+        <td>${escapeHtml(r.備註)}</td>
+      </tr>`,
+      )
+      .join("");
+    win.document.write(`
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>BJC 檢查清單 ${date}</title>
+          <style>
+            body { font-family: "Microsoft JhengHei", "PingFang TC", Arial, sans-serif; padding: 16px; }
+            h1 { font-size: 18px; margin-bottom: 12px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #999; padding: 4px 6px; text-align: center; }
+            th { background: #eee; }
+            @media print {
+              @page { size: landscape; margin: 12mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>BJC 檢查清單（${date}）</h1>
+          <table>
+            <thead>
+              <tr>
+                <th>BJC</th><th>類別</th><th>應有</th><th>成功</th><th>失敗</th>
+                <th>結果</th><th>審</th><th>複</th><th>登</th><th>備註</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    win.document.close();
+    win.focus();
+    win.onload = () => win.print();
+    setTimeout(() => win.print(), 300);
+  };
+
   const handleImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -427,6 +520,12 @@ export default function App() {
             <>
               <button className="reset-btn" onClick={handleExport}>
                 匯出
+              </button>
+              <button className="reset-btn" onClick={handleExportExcel}>
+                匯出Excel
+              </button>
+              <button className="reset-btn" onClick={handleExportPDF}>
+                匯出PDF
               </button>
               <label className="reset-btn import-btn">
                 匯入
