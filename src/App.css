@@ -24,6 +24,7 @@
   display: flex;
   gap: 6px;
   align-items: center;
+  position: relative;
 }
 .reset-btn {
   background: rgba(255,255,255,.2);
@@ -37,6 +38,75 @@
 }
 .reset-btn:active { opacity: .7; }
 .import-btn { display: inline-flex; align-items: center; }
+
+/* ── Hamburger menu ── */
+.menu-toggle {
+  width: 40px;
+  height: 36px;
+  border: none;
+  background: rgba(255,255,255,.2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.menu-toggle span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform .18s, opacity .18s;
+}
+.menu-toggle.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.menu-toggle.open span:nth-child(2) { opacity: 0; }
+.menu-toggle.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: transparent;
+}
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 21;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 6px;
+  gap: 2px;
+  animation: menuIn .15s ease-out;
+}
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.menu-item {
+  background: none;
+  border: none;
+  color: #111;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: .9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.menu-item:active { background: #f3f4f6; }
+.import-item { display: flex; align-items: center; }
 
 /* ── Stats ── */
 .stats-bar {

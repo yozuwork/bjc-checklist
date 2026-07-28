@@ -24,7 +24,17 @@ const STORAGE_KEY = "bjc-checklist-v1";
 function loadData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const savedIds = new Set(parsed.map((r) => r.id));
+      const missing = initialData.filter((r) => !savedIds.has(r.id));
+      if (missing.length) {
+        const merged = [...parsed, ...missing];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        return merged;
+      }
+      return parsed;
+    }
   } catch {}
   return initialData;
 }
@@ -320,6 +330,7 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [statsFilter, setStatsFilter] = useState(null);
   const [findFilter, setFindFilter] = useState("找全部");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleToggle = (id, field) => {
     const updated = rows.map((r) =>
@@ -516,37 +527,86 @@ export default function App() {
       <header className="header">
         <h1>BJC 檢查網頁</h1>
         <div className="header-actions">
-          {page === "list" && (
+          <button
+            className={`menu-toggle ${menuOpen ? "open" : ""}`}
+            aria-label="選單"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          {menuOpen && (
             <>
-              <button className="reset-btn" onClick={handleExport}>
-                匯出
-              </button>
-              <button className="reset-btn" onClick={handleExportExcel}>
-                匯出Excel
-              </button>
-              <button className="reset-btn" onClick={handleExportPDF}>
-                匯出PDF
-              </button>
-              <label className="reset-btn import-btn">
-                匯入
-                <input
-                  type="file"
-                  accept=".json"
-                  style={{ display: "none" }}
-                  onChange={handleImport}
-                />
-              </label>
-              <button className="reset-btn" onClick={handleReset}>
-                重置
-              </button>
+              <div
+                className="menu-backdrop"
+                onClick={() => setMenuOpen(false)}
+              />
+              <div className="menu-dropdown">
+                {page === "list" && (
+                  <>
+                    <button
+                      className="menu-item"
+                      onClick={() => {
+                        handleExport();
+                        setMenuOpen(false);
+                      }}
+                    >
+                      匯出
+                    </button>
+                    <button
+                      className="menu-item"
+                      onClick={() => {
+                        handleExportExcel();
+                        setMenuOpen(false);
+                      }}
+                    >
+                      匯出Excel
+                    </button>
+                    <button
+                      className="menu-item"
+                      onClick={() => {
+                        handleExportPDF();
+                        setMenuOpen(false);
+                      }}
+                    >
+                      匯出PDF
+                    </button>
+                    <label className="menu-item import-item">
+                      匯入
+                      <input
+                        type="file"
+                        accept=".json"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          handleImport(e);
+                          setMenuOpen(false);
+                        }}
+                      />
+                    </label>
+                    <button
+                      className="menu-item"
+                      onClick={() => {
+                        handleReset();
+                        setMenuOpen(false);
+                      }}
+                    >
+                      重置
+                    </button>
+                  </>
+                )}
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    setPage(page === "about" ? "list" : "about");
+                    setMenuOpen(false);
+                  }}
+                >
+                  {page === "about" ? "返回" : "關於"}
+                </button>
+              </div>
             </>
           )}
-          <button
-            className="reset-btn"
-            onClick={() => setPage(page === "about" ? "list" : "about")}
-          >
-            {page === "about" ? "返回" : "關於"}
-          </button>
         </div>
       </header>
 

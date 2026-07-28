@@ -54,6 +54,7 @@ export const initialData = [
   { id: 53, bjc: 56, 應有: null, 成功: null, 失敗: null, 類別: "昨天" },
   { id: 54, bjc: 57, 應有: null, 成功: null, 失敗: null, 類別: "昨天" },
   { id: 55, bjc: 62, 應有: null, 成功: null, 失敗: null, 類別: "昨天" },
+  { id: 56, bjc: 76, 應有: null, 成功: null, 失敗: null, 類別: "今天" },
 ];
 
 export const CATEGORIES = ["無類別", "今天", "昨天"];
