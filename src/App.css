@@ -277,6 +277,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .check-tag {
   font-size: .68rem;
@@ -294,15 +296,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   cursor: pointer;
-  padding: 4px 2px;
+  min-width: 40px;
+  min-height: 44px;
+  padding: 2px 0;
   -webkit-user-select: none;
   user-select: none;
 }
 .card-check input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   accent-color: #1a73e8;
   cursor: pointer;
   margin: 0;
@@ -318,7 +323,6 @@
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 8px;
-  margin-left: auto;
   flex-shrink: 0;
 }
 .success-tag { background: #dcfce7; color: #15803d; }
@@ -477,6 +481,30 @@
   width: 100%;
 }
 .dialog-input:focus { border-color: #1a73e8; background: #fff; }
+.dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: #374151;
+}
+.dialog-error {
+  margin-top: -8px;
+  font-size: .75rem;
+  color: #dc2626;
+  text-align: center;
+}
+.dialog-preview {
+  margin-top: -8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: .82rem;
+  font-weight: 600;
+  text-align: center;
+}
 .dialog-actions {
   display: flex;
   gap: 10px;
@@ -493,6 +521,10 @@
 }
 .dialog-actions .btn-cancel { background: #f3f4f6; color: #374151; }
 .dialog-actions .btn-save   { background: #1a73e8; color: #fff; }
+.dialog-actions .btn-save:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
 
 .about-page {
   flex: 1;

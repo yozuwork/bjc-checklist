@@ -19,6 +19,13 @@ const CATEGORY_COLORS = {
   昨天: "#f59e0b",
 };
 
+const CATEGORY_LABELS = {
+  今天: "要填寫數量的BJC-今天",
+  昨天: "要填寫數量的BJC-昨天",
+};
+
+const getCategoryLabel = (category) => CATEGORY_LABELS[category] ?? category;
+
 const STORAGE_KEY = "bjc-checklist-v1";
 
 function loadData() {
@@ -67,6 +74,88 @@ function FailDialog({ onConfirm, onCancel }) {
   );
 }
 
+function CardResultDialog({ result, onConfirm, onCancel }) {
+  const [expected, setExpected] = useState("");
+  const [failed, setFailed] = useState("");
+  const isFail = result === "失敗";
+  const expectedNumber = Number(expected);
+  const failedNumber = Number(failed);
+  const expectedIsValid =
+    expected !== "" && Number.isInteger(expectedNumber) && expectedNumber >= 0;
+  const failedIsValid =
+    !isFail ||
+    (failed !== "" &&
+      Number.isInteger(failedNumber) &&
+      failedNumber >= 0 &&
+      failedNumber <= expectedNumber);
+  const canConfirm = expectedIsValid && failedIsValid;
+
+  const submit = () => {
+    if (!canConfirm) return;
+    onConfirm({ expected: expectedNumber, failed: isFail ? failedNumber : 0 });
+  };
+
+  return (
+    <div
+      className="dialog-backdrop"
+      style={{ position: "fixed", zIndex: 350 }}
+      onClick={onCancel}
+    >
+      <div className="dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="dialog-title">
+          {isFail ? "輸入應有與失敗數量" : "輸入應有數量"}
+        </div>
+        <label className="dialog-field">
+          <span>應有數量</span>
+          <input
+            className="dialog-input"
+            type="number"
+            inputMode="numeric"
+            min="0"
+            step="1"
+            value={expected}
+            autoFocus
+            onChange={(e) => setExpected(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !isFail && submit()}
+          />
+        </label>
+        {isFail && (
+          <label className="dialog-field">
+            <span>失敗數量</span>
+            <input
+              className="dialog-input"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max={expectedIsValid ? expectedNumber : undefined}
+              step="1"
+              value={failed}
+              onChange={(e) => setFailed(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+            />
+          </label>
+        )}
+        {isFail && expectedIsValid && failed !== "" && !failedIsValid && (
+          <div className="dialog-error">失敗數量不可大於應有數量</div>
+        )}
+        {isFail && canConfirm && (
+          <div className="dialog-preview">
+            成功數量：{expectedNumber - failedNumber}
+          </div>
+        )}
+        <div className="dialog-actions">
+          <button className="btn-cancel" onClick={onCancel}>
+            取消
+          </button>
+          <button className="btn-save" disabled={!canConfirm} onClick={submit}>
+            確定
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EditModal({ row, onSave, onClose }) {
   const [form, setForm] = useState({
     應有: row.應有 ?? "",
@@ -74,7 +163,6 @@ function EditModal({ row, onSave, onClose }) {
     失敗: row.失敗 ?? "",
     類別: row.類別,
     審查: !!row.審查,
-    複查: !!row.複查,
     已登記: !!row.已登記,
     已提供釐正或問題原因: !!row.已提供釐正或問題原因,
     找: row.找 ?? "找今天",
@@ -222,7 +310,9 @@ function EditModal({ row, onSave, onClose }) {
             類別
             <select value={form.類別} onChange={set("類別")}>
               {CATEGORIES.map((c) => (
-                <option key={c}>{c}</option>
+                <option key={c} value={c}>
+                  {getCategoryLabel(c)}
+                </option>
               ))}
             </select>
           </label>
@@ -235,26 +325,6 @@ function EditModal({ row, onSave, onClose }) {
               </select>
             </label>
           )}
-          <label className="label-checkbox">
-            <input
-              type="checkbox"
-              checked={form.審查}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, 審查: e.target.checked }))
-              }
-            />
-            審查
-          </label>
-          <label className="label-checkbox">
-            <input
-              type="checkbox"
-              checked={form.複查}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, 複查: e.target.checked }))
-              }
-            />
-            複查
-          </label>
           <label className="label-checkbox">
             <input
               type="checkbox"
@@ -331,12 +401,51 @@ export default function App() {
   const [statsFilter, setStatsFilter] = useState(null);
   const [findFilter, setFindFilter] = useState("找全部");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [resultDialog, setResultDialog] = useState(null);
 
   const handleToggle = (id, field) => {
     const updated = rows.map((r) =>
       r.id === id ? { ...r, [field]: !r[field] } : r,
     );
     save(updated);
+  };
+
+  const handleResultToggle = (id, result) => {
+    const row = rows.find((item) => item.id === id);
+    if (!row) return;
+
+    if (row.結果 === result) {
+      save(rows.map((item) => (item.id === id ? { ...item, 結果: null } : item)));
+      return;
+    }
+
+    if (row.類別 === "今天" || row.類別 === "昨天") {
+      setResultDialog({ id, result });
+      return;
+    }
+
+    const updated = rows.map((r) =>
+      r.id === id ? { ...r, 結果: result } : r,
+    );
+    save(updated);
+  };
+
+  const confirmCardResult = ({ expected, failed }) => {
+    if (!resultDialog) return;
+    const { id, result } = resultDialog;
+    const updated = rows.map((row) =>
+      row.id === id
+        ? {
+            ...row,
+            應有: expected,
+            成功: result === "成功" ? expected : expected - failed,
+            失敗: result === "成功" ? 0 : failed,
+            結果: result,
+          }
+        : row,
+    );
+    save(updated);
+    setResultDialog(null);
   };
 
   const save = (updated) => {
@@ -359,7 +468,6 @@ export default function App() {
             失敗: form.失敗 === "" ? null : Number(form.失敗),
             類別: form.類別,
             審查: form.審查 || null,
-            複查: form.複查 || null,
             已登記: form.已登記 || null,
             已提供釐正或問題原因: form.已提供釐正或問題原因 || null,
             找: form.找 || null,
@@ -393,13 +501,12 @@ export default function App() {
   const handleExportExcel = () => {
     const data = rows.map((r) => ({
       BJC: r.bjc,
-      類別: r.類別,
+      類別: getCategoryLabel(r.類別),
       應有: r.應有 ?? "",
       成功: r.成功 ?? "",
       失敗: r.失敗 ?? "",
       結果: r.結果 ?? "",
       審查: r.審查 ? "是" : "",
-      複查: r.複查 ? "是" : "",
       已登記: r.已登記 ? "是" : "",
       已提供釐正或問題原因: r.已提供釐正或問題原因 ? "是" : "",
       找: r.找 ?? "",
@@ -424,13 +531,12 @@ export default function App() {
         (r) => `
       <tr>
         <td>${escapeHtml(r.bjc)}</td>
-        <td>${escapeHtml(r.類別)}</td>
+        <td>${escapeHtml(getCategoryLabel(r.類別))}</td>
         <td>${escapeHtml(r.應有)}</td>
         <td>${escapeHtml(r.成功)}</td>
         <td>${escapeHtml(r.失敗)}</td>
         <td>${escapeHtml(r.結果)}</td>
         <td>${r.審查 ? "✓" : ""}</td>
-        <td>${r.複查 ? "✓" : ""}</td>
         <td>${r.已登記 ? "✓" : ""}</td>
         <td>${escapeHtml(r.備註)}</td>
       </tr>`,
@@ -458,7 +564,7 @@ export default function App() {
             <thead>
               <tr>
                 <th>BJC</th><th>類別</th><th>應有</th><th>成功</th><th>失敗</th>
-                <th>結果</th><th>審</th><th>複</th><th>登</th><th>備註</th>
+                <th>結果</th><th>審</th><th>登</th><th>備註</th>
               </tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
@@ -499,7 +605,7 @@ export default function App() {
         (r) => String(r.bjc).includes(q) || (r.備註 || "").includes(q),
       );
     }
-    if (statsFilter === "done") list = list.filter((r) => r.審查 || r.複查);
+    if (statsFilter === "done") list = list.filter((r) => r.審查);
     if (statsFilter === "noted") list = list.filter((r) => r.備註);
     if (statsFilter === "success") list = list.filter((r) => r.結果 === "成功");
     if (statsFilter === "fail") list = list.filter((r) => r.結果 === "失敗");
@@ -511,7 +617,7 @@ export default function App() {
   const stats = useMemo(
     () => ({
       total: rows.length,
-      done: rows.filter((r) => r.審查 || r.複查).length,
+      done: rows.filter((r) => r.審查).length,
       noted: rows.filter((r) => r.備註).length,
       success: rows.filter((r) => r.結果 === "成功").length,
       fail: rows.filter((r) => r.結果 === "失敗").length,
@@ -677,7 +783,7 @@ export default function App() {
                     setFindFilter("找全部");
                   }}
                 >
-                  {c}
+                  {getCategoryLabel(c)}
                 </button>
               ))}
             </div>
@@ -707,7 +813,7 @@ export default function App() {
             )}
             {filtered.map((row) => {
               const color = CATEGORY_COLORS[row.類別] || "#6b7280";
-              const isDone = row.審查 || row.複查;
+              const isDone = row.審查;
               return (
                 <div
                   key={row.id}
@@ -717,7 +823,7 @@ export default function App() {
                   <div className="card-left">
                     <span className="bjc-num">BJC {row.bjc}</span>
                     <span className="badge" style={{ background: color }}>
-                      {row.類別}
+                      {getCategoryLabel(row.類別)}
                     </span>
                   </div>
                   {row.類別 !== "無類別" && (
@@ -759,10 +865,10 @@ export default function App() {
                     >
                       <input
                         type="checkbox"
-                        checked={!!row.審查}
-                        onChange={() => handleToggle(row.id, "審查")}
+                        checked={row.結果 === "成功"}
+                        onChange={() => handleResultToggle(row.id, "成功")}
                       />
-                      <span>審</span>
+                      <span>成功</span>
                     </label>
                     <label
                       className="card-check"
@@ -770,11 +876,12 @@ export default function App() {
                     >
                       <input
                         type="checkbox"
-                        checked={!!row.複查}
-                        onChange={() => handleToggle(row.id, "複查")}
+                        checked={row.結果 === "失敗"}
+                        onChange={() => handleResultToggle(row.id, "失敗")}
                       />
-                      <span>複</span>
+                      <span>失敗</span>
                     </label>
+                    {row.備註 && <span className="note-icon">📝</span>}
                     <label
                       className="card-check"
                       onClick={(e) => e.stopPropagation()}
@@ -786,7 +893,6 @@ export default function App() {
                       />
                       <span>登</span>
                     </label>
-                    {row.備註 && <span className="note-icon">📝</span>}
                     <span className="arrow">›</span>
                   </div>
                   {row.結果 && (
@@ -812,6 +918,13 @@ export default function App() {
       )}
 
       {showWelcome && <WelcomeDialog onClose={() => setShowWelcome(false)} />}
+      {resultDialog && (
+        <CardResultDialog
+          result={resultDialog.result}
+          onConfirm={confirmCardResult}
+          onCancel={() => setResultDialog(null)}
+        />
+      )}
     </div>
   );
 }
